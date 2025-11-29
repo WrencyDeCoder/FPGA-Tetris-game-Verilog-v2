@@ -12,16 +12,15 @@
 `define V_BACK    33
 `define V_TOTAL   525
 
-// The type of each block
-`define EMPTY_BLOCK 	3'b000
-`define I_BLOCK 		3'b001
-`define O_BLOCK 		3'b010
-`define T_BLOCK 		3'b011
-`define S_BLOCK 		3'b100
-`define Z_BLOCK 		3'b101
-`define J_BLOCK 		3'b110
-`define L_BLOCK 		3'b111
-
+// The type of each block	
+`define I_BLOCK 		3'b000
+`define O_BLOCK 		3'b001
+`define T_BLOCK 		3'b010
+`define S_BLOCK 		3'b011
+`define Z_BLOCK 		3'b100
+`define J_BLOCK 		3'b101
+`define L_BLOCK 		3'b110
+`define EMPTY_BLOCK     3'b111
 // Color mapping
 	 // --- Background and Grid ---
 `define COLOR_BG          {10'h060, 10'h0A0, 10'h140} // bright blue background
@@ -36,6 +35,7 @@
 `define COLOR_BLOCK_S     {10'h080, 10'h3FF, 10'h120} // fresh green
 `define COLOR_BLOCK_T     {10'h2A0, 10'h080, 10'h3FF} // bright purple-blue
 `define COLOR_BLOCK_Z     {10'h3FF, 10'h080, 10'h080} // soft red with blue undertone
+`define COLOR_BLOCK_LOCK  {10'h080, 10'h080, 10'h080}
 
     // --- Text and Effects ---
 `define COLOR_TEXT        {10'h3FF, 10'h3FF, 10'h3FF} // pure white
@@ -53,11 +53,13 @@
 
 // State
 `define S_IDLE		3'd0
-`define S_PLAY		3'd1
-`define S_ADD		3'd2
-`define S_CHECK	3'd3
-`define S_REMOVE	3'd4
-`define S_PAUSE	3'd5
+`define S_START		3'd1
+`define S_PLAY		3'd2
+`define S_ADD		3'd3
+`define S_CHECK	    3'd4
+`define S_REMOVE	3'd5
+`define S_OVER	    3'd6
+`define S_PAUSE	    3'd7
 
 // LFSR seed
 `define LFSR_SEED		8'b10101010

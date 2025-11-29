@@ -5,6 +5,7 @@ simulation/
 output_files/
 graybox_tmp/
 c5_pin_model_temp/
+tb_img/
 
 # Auto-generated files
 *.rpt

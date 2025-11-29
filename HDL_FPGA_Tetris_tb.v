@@ -25,7 +25,7 @@ module HDL_FPGA_Tetris_tb;
         .vga_vsync(vga_vsync),
         .vga_blank(vga_blank),
         .vga_sync(vga_sync),
-		  .vga_clk(vga_clk),
+		.vga_clk(vga_clk),
         .vga_r(vga_r),
         .vga_g(vga_g),
         .vga_b(vga_b)

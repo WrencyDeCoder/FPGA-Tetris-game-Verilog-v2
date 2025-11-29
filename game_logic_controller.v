@@ -9,11 +9,11 @@ module game_logic_controller (
 	input   wire        	right_btn,
 	input   wire        	left_btn,
 	input   wire        	rotate_btn,
-	
+	input   wire 			sw_pause,
 	//from VGA
-	input   wire				active_area,
+	input   wire			active_area,
 	input   wire 	[9:0] 	screen_x,
-   input   wire 	[9:0] 	screen_y,
+   	input   wire 	[9:0] 	screen_y,
 	
 	output  reg 	[29:0]   	RGB
 );
@@ -53,7 +53,7 @@ module game_logic_controller (
 	wire [1:0] random_rotate;
 	assign random_rotate = random[7:6];
 	wire [2:0] random_piece;
-	assign random_piece  = (random[2:0]) ? random[2:0] : 3'b001;
+	assign random_piece  = (random[2:0] == 3'b111) ?  3'b001 : random[2:0];
 
 	randomizer random_inst (
 		.clk(clk),
@@ -71,8 +71,8 @@ module game_logic_controller (
 	reg 	[2:0]   	next_piece;
 	reg 	[1:0] 	next_piece_rot;
 
-	wire 	[15:0] 	piece_bool 		[7:0][4:0];
-	wire 	[3:0] 	piece_height	[7:0][4:0];
+	wire [15:0] 	piece_bool 	[7:0][4:0];
+	wire [3:0] 	piece_height	[7:0][4:0];
 	
 	// I piece
 	assign piece_bool[0][0] = 16'b1000100010001000; assign piece_height[0][0] = 4'd4;
@@ -172,7 +172,7 @@ module game_logic_controller (
 							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift) == 4'b0000) ;
 
 	// SCORE
-	reg [3:0] score_1, score_2, score_3; 
+	reg [3:0] score_1, score_2, score_3; // ones, tens, hundred 
 
 	// FALL TIMER
 	reg 		 fall_signal;
@@ -182,7 +182,7 @@ module game_logic_controller (
 	// BOOLEAN FLAGS
 	wire is_full_line[`BLOCKS_H-5'd1:0] ;
 	wire game_start = down_signal | left_signal | right_signal | down_signal;
-	wire game_over;
+	wire game_over = |(game_board[0]);  
 
 	// SCREEN CHECK
 	wire inside_board;
@@ -217,7 +217,7 @@ module game_logic_controller (
 	begin
 		curr_piece  		<= next_piece;
 		curr_piece_rot 	<= next_piece_rot;
-		next_piece 			<= random_piece;
+		next_piece 		<= random_piece;
 		next_piece_rot 	<= random_rotate;
 
 		curr_piece_x  <= 4'd4;
@@ -245,6 +245,31 @@ module game_logic_controller (
 	endtask
 
 	// MOVEMENT TASKS
+	task move_piece;
+	begin
+		if (fall_signal) begin
+			if (!can_down) state <= `S_ADD;
+			move_down();
+		end
+
+		fall_signal <= 1'b0;
+		fall_timer  <= fall_timer + 10'd1;
+
+		if (fall_timer >= FALL_TIMER_MAX) begin
+			fall_signal <= 1'b1;
+			fall_timer  <= 10'd0;
+		end 
+		else if (down_signal)
+			move_down();
+		else if (right_signal)
+			move_right();
+		else if (left_signal)
+			move_left();
+		else if (rotate_signal)
+			rotate();
+	end
+	endtask
+
 	task move_right;
 	begin
 		if (can_move_right)
@@ -286,21 +311,34 @@ module game_logic_controller (
 	endtask
 
 	// TASK: increase_score
+	// note: update difference score with difference line full
 	task increase_score;
+		input [2:0] num_lines;    
 	begin
-		 score_1 <= score_1 + 4'd1;
-		 if (score_1 > 4'd9) begin
-			  score_1 <= 4'd0;
-			  score_2 <= score_2 + 4'd1;
-		 end
-		 if (score_2 > 4'd9) begin
-			  score_2 <= 4'd0;
-			  score_3 <= score_3 + 4'd1;
-		 end 
-		 if (score_3 > 4'd9)
-			  score_3 <= 4'd0;
+		case (num_lines)
+			3'd1: score_1 <= score_1 + 4'd1;  // single
+			3'd2: score_1 <= score_1 + 4'd3;  // double
+			3'd3: score_1 <= score_1 + 4'd5;  // triple
+			3'd4: score_1 <= score_1 + 4'd8;  // Tetris
+			default: score_1 <= score_1 + 4'd0;
+		endcase
+
+		if (score_1 > 4'd9) begin
+			score_1 <= score_1 - 4'd10;
+			score_2 <= score_2 + 4'd1;
+		end
+		
+		if (score_2 > 4'd9) begin
+			score_2 <= 4'd0;
+			score_3 <= score_3 + 4'd1;
+		end
+		
+		if (score_3 > 4'd9) begin
+			score_3 <= 4'd0;
+		end
 	end
 	endtask
+
 
 	// TASK: check_full_line 
 	reg [4:0] index_map[`BLOCKS_H-1:0];
@@ -313,10 +351,12 @@ module game_logic_controller (
 	endgenerate
 	
 	task check_full_line;
-		integer row, idx, j, row_full;
+		integer row, idx, j;
+		reg [2:0] full_line_count;
 	begin
 		row = `BLOCKS_H - 1;
 		idx = 0;
+		full_line_count = 0;
 
 		for (j = 0; j < `BLOCKS_H; j = j + 1)
 			index_map[j] = 0;
@@ -326,10 +366,12 @@ module game_logic_controller (
 				index_map[idx] = row;
 				idx = idx + 1;
 			end else begin
-				increase_score();
+				full_line_count = full_line_count + 3'd1;
 			end
 			row = row - 1;
-		 end
+		end
+
+		increase_score(full_line_count);
 	end
 	endtask
 
@@ -339,7 +381,7 @@ module game_logic_controller (
 		integer src_row_idx;
 	begin
 		for (i = 0; i < `BLOCKS_H; i = i + 1) begin
-		   src_row_idx = index_map[`BLOCKS_H - i - 1];
+		   	src_row_idx = index_map[`BLOCKS_H - i - 1];
 			game_board[i] = game_board[src_row_idx];
 		end
 	end
@@ -353,7 +395,8 @@ module game_logic_controller (
 		fall_timer = 10'd0;
 		RGB = 30'd0;
 		
-		for (i = 0; i < `BLOCKS_H; i = i + 1) begin
+		for (i = 0; i < `BLOCKS_H; i = i + 1) 
+		begin
 			game_board[i] = 10'd0;
 		end
 	end
@@ -368,33 +411,18 @@ module game_logic_controller (
 			state <= `S_IDLE;
 		end 
 		else begin
+			
 			if (state == `S_IDLE) begin
-				start_game();
 				//if (game_start) state <= `S_PLAY;
+				state <= `S_START;
+
+			end else if (state == `S_START) begin
+				start_game();
 				state <= `S_PLAY;
+
 			end else if (state == `S_PLAY) begin
-				if (fall_signal) begin
-					if (!can_down) state <= `S_ADD;
-					move_down();
-				end
-
-				fall_signal <= 1'b0;
-				fall_timer  <= fall_timer + 10'd1;
-
-				if (fall_timer >= FALL_TIMER_MAX) begin
-					fall_signal <= 1'b1;
-					fall_timer  <= 10'd0;
-				end 
-
-				else if (down_signal)
-					move_down();
-				else if (right_signal)
-					move_right();
-				else if (left_signal)
-					move_left();
-				else if (rotate_signal)
-					rotate();
-
+				move_piece();
+				// if colision state = S_ADD
 			end else if (state == `S_ADD) begin
 				add_to_game_board();
 				state <= `S_CHECK;
@@ -406,23 +434,46 @@ module game_logic_controller (
 			end else if (state == `S_REMOVE) begin
 				rebuild_board();
 				get_new_block();
-				state <= `S_PLAY;
-		   end
+				state <= (game_over) ? `S_OVER : `S_PLAY;
+			end
 		end
 	end
 
+	// DRAW PIXELS
 	always @(*) begin
 		if (active_area) begin
 			if (inside_board) begin
 				if (is_grid) RGB <= `COLOR_GRID;
-				else if (is_curr_piece) RGB <= `COLOR_BLOCK_I;
-				else if (game_board[h_div][`BLOCKS_W - w_div - 4'd1]) RGB <= `COLOR_BLOCK_Z;
-				else RGB <= `COLOR_BLOCK;
+				else if (is_curr_piece) begin 
+					case (curr_piece)
+						3'b000 : RGB <= `COLOR_BLOCK_I;
+						3'b001 : RGB <= `COLOR_BLOCK_O;
+						3'b010 : RGB <= `COLOR_BLOCK_T;
+						3'b011 : RGB <= `COLOR_BLOCK_S;
+						3'b100 : RGB <= `COLOR_BLOCK_Z;
+						3'b101 : RGB <= `COLOR_BLOCK_J;
+						3'b110 : RGB <= `COLOR_BLOCK_L;
+						default : RGB <= `COLOR_BLOCK;					
+					endcase
+				end
+				else if (game_board[h_div][`BLOCKS_W - w_div - 4'd1]) begin
+					RGB <= `COLOR_BLOCK_LOCK;
+				end
 			end else if (is_next_piece) begin
-				RGB <= `COLOR_BLOCK_I; 
+				case (next_piece)
+					3'b000 : RGB <= `COLOR_BLOCK_I;
+					3'b001 : RGB <= `COLOR_BLOCK_O;
+					3'b010 : RGB <= `COLOR_BLOCK_T;
+					3'b011 : RGB <= `COLOR_BLOCK_S;
+					3'b100 : RGB <= `COLOR_BLOCK_Z;
+					3'b101 : RGB <= `COLOR_BLOCK_J;
+					3'b110 : RGB <= `COLOR_BLOCK_L;
+					default : RGB <= `COLOR_BLOCK;					
+				endcase
 			end else begin
 				RGB <= `COLOR_BG;
 			end
 		end
 	end
+
 endmodule

@@ -4,12 +4,14 @@
 
 module HDL_FPGA_Tetris (
 	input 	wire		clk_50,
-	input		wire		reset_n,
+	input	wire		reset_n,
 	
-	input		wire		button_down,
-	input		wire		button_rotate,
-	input		wire		button_left,
-	input		wire		button_right,
+	input	wire		button_down,
+	input	wire		button_rotate,
+	input	wire		button_left,
+	input	wire		button_right,
+
+	input  	wire 	sw_pause,
 	
 	output	wire			vga_hsync,
 	output	wire			vga_vsync,
@@ -26,7 +28,7 @@ module HDL_FPGA_Tetris (
 	wire 	[9:0]	y;
 	wire 			clk_25;
 	wire 			active_area;
-	wire  [29:0] RGB;
+	wire  	[29:0] 	RGB;
 	
 	assign vga_r = RGB[29:20];
 	assign vga_g = RGB[19:10];
@@ -79,6 +81,7 @@ module HDL_FPGA_Tetris (
 		.down_btn(button_down),
 		.right_btn(button_right),
 		.left_btn(button_left),
+		.sw_pause(sw_pause),
 		.rotate_btn(button_rotate),
 		.active_area(active_area),
 		.screen_x(x),

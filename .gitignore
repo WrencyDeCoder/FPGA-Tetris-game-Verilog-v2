@@ -1,0 +1,31 @@
+# Quartus temporary build folders
+db/
+incremental_db/
+simulation/
+output_files/
+graybox_tmp/
+c5_pin_model_temp/
+
+# Auto-generated files
+*.rpt
+*.qws
+*.smsg
+*.chg
+*.bak
+*.qdf
+*.sof
+*.pof
+*.jic
+*.hex
+*.map
+*.summary
+*.done
+*.sld
+
+# Backup files
+*~
+*.old
+
+# Windows/OS common
+Thumbs.db
+.DS_Store

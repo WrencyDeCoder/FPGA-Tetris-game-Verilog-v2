@@ -165,7 +165,7 @@ module game_logic_controller (
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> right_piece_x_shift))) ;
 
 	wire can_rotate;
-	assign can_rotate = is_curr_piece_h_ok &&
+	assign can_rotate = is_curr_piece_h_ok && is_curr_piece_w_ok &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift))) &&
@@ -227,6 +227,7 @@ module game_logic_controller (
 
 	// TASK: start_game
 	task start_game;
+		integer i;
 	begin
 		score_1 <= 0;
 		score_2 <= 0;
@@ -241,6 +242,11 @@ module game_logic_controller (
 		curr_piece_y   <= 5'd0;
 		
 		fall_timer  <= 10'd0;
+		
+		for (i = 0; i < `BLOCKS_H; i = i + 1) 
+		begin
+			game_board[i] <= 10'd0;
+		end
 	end
 	endtask
 
@@ -354,21 +360,19 @@ module game_logic_controller (
 		integer row, idx, j;
 		reg [2:0] full_line_count;
 	begin
-		row = `BLOCKS_H - 1;
 		idx = 0;
 		full_line_count = 0;
 
 		for (j = 0; j < `BLOCKS_H; j = j + 1)
 			index_map[j] = 0;
 
-		while (row >= 0) begin
-			if (!is_full_line[row]) begin
-				index_map[idx] <= row;
+		for (row =  `BLOCKS_H - 1; row >= 0; row = row - 1) begin
+			if (~&game_board[row]) begin
+				index_map[idx] = row;
 				idx = idx + 1;
 			end else begin
 				full_line_count = full_line_count + 3'd1;
 			end
-			row = row - 1;
 		end
 
 		increase_score(full_line_count);
@@ -380,7 +384,7 @@ module game_logic_controller (
 		integer i;
 		integer src_row_idx;
 	begin
-		for (i = 0; i < `BLOCKS_H; i = i + 1) begin
+		for (i = `BLOCKS_H - 1; i >= 0; i = i - 1) begin
 			src_row_idx = index_map[`BLOCKS_H - i - 1];
 			game_board[i] = game_board[src_row_idx];
 		end
@@ -416,6 +420,13 @@ module game_logic_controller (
 	always @(posedge clk or negedge reset_n) begin
 		if (!reset_n) begin
 			state <= `S_IDLE;
+			next_piece  	<= 3'd7;
+			next_piece_rot <= 2'd0;
+
+			curr_piece   	<= 3'd7;
+			curr_piece_rot <= 2'd0;
+			curr_piece_x   <= 4'd4;
+			curr_piece_y   <= 5'd0;
 		end 
 		else begin
 			
@@ -444,6 +455,7 @@ module game_logic_controller (
 				state <= (game_over) ? `S_OVER : `S_PLAY;
 			end else if (state == `S_OVER) begin
 				# 1_000_000; // 1s
+				state <= `S_IDLE;
 			end else state <= `S_IDLE;
 		end
 	end

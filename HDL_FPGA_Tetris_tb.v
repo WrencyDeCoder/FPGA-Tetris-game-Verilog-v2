@@ -32,17 +32,13 @@ module HDL_FPGA_Tetris_tb;
     );
 
 	 
-    // ------------------------------------------------------------
     // CLOCK GENERATION: 50 MHz
-    // ------------------------------------------------------------
     initial begin
         clk_50 = 0;
         forever #10 clk_50 = ~clk_50; // 20 ns = 50 MHz
+        forever #250_500 button_right = ~button_right;
     end
 
-    // ------------------------------------------------------------
-    // RESET
-    // ------------------------------------------------------------
     initial begin
         reset_n = 0;
         button_down   = 0;
@@ -54,12 +50,6 @@ module HDL_FPGA_Tetris_tb;
         reset_n = 1;
     end
 
-
-    // ------------------------------------------------------------
-    // FRAME CAPTURE (10 FRAMES)
-    // mỗi frame cách nhau 0.5 giây simulation time
-    // lưu file frame_X.hex
-    // ------------------------------------------------------------
     integer f;
     integer frame_id;
     initial begin
@@ -115,8 +105,7 @@ task capture_frame;
         y_cnt = 0;
 		  
         while (y_cnt < 480) begin
-			button_left = ~button_left;
-				@(negedge vga_hsync);
+			@(negedge vga_hsync);
             x_cnt = 0;
             while (x_cnt < 640) begin
                 @(posedge clk_50);

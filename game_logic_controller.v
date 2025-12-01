@@ -126,10 +126,10 @@ module game_logic_controller (
 	assign curr_piece_x_shift = (`BLOCKS_W - 4'd1) - curr_piece_x;
 	
 	wire [3:0] left_piece_x_shift;
-	assign left_piece_x_shift = curr_piece_x_shift - 4'd1;
+	assign left_piece_x_shift = curr_piece_x_shift + 4'd1;
 	
 	wire [3:0] right_piece_x_shift;
-	assign right_piece_x_shift = curr_piece_x_shift + 4'd1;
+	assign right_piece_x_shift = curr_piece_x_shift - 4'd1;
 	
 	wire [1:0] test_piece_rot;
 	assign test_piece_rot = curr_piece_rot + 2'b01;
@@ -151,25 +151,25 @@ module game_logic_controller (
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[curr_piece_y + 4], 3'b0} >> curr_piece_x_shift))) ;
 
 	wire can_move_left;
-	assign can_move_left = is_curr_piece_h_ok && is_curr_piece_w_ok &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift) == 4'b0000) ;
-	
+	assign can_move_left = (curr_piece_x > 0) && is_curr_piece_w_ok &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> left_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> left_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> left_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> left_piece_x_shift))) ;
+
 	wire can_move_right;
-	assign can_move_right = is_curr_piece_h_ok && is_curr_piece_w_ok &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift) == 4'b0000) ;
+	assign can_move_right =  is_curr_piece_w_ok &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> right_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> right_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> right_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> right_piece_x_shift))) ;
 
 	wire can_rotate;
 	assign can_rotate = is_curr_piece_h_ok &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift) == 4'b0000) &&
-							({6'b000000, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift) == 4'b0000) ;
+							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift))) &&
+							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift))) ;
 
 	// SCORE
 	reg [3:0] score_1, score_2, score_3; // ones, tens, hundred 
@@ -177,12 +177,12 @@ module game_logic_controller (
 	// FALL TIMER
 	reg 		 fall_signal;
 	reg [9:0] fall_timer;
-	localparam FALL_TIMER_MAX = 1;
+	localparam FALL_TIMER_MAX = 40;
 
 	// BOOLEAN FLAGS
 	wire is_full_line[`BLOCKS_H-5'd1:0] ;
-	wire game_start = down_signal | left_signal | right_signal | down_signal;
-	wire game_over = |(game_board[0]);  
+	wire game_start = down_signal | left_signal | right_signal | rotate_signal;
+	wire game_over =  (|game_board[0]);  
 
 	// SCREEN CHECK
 	wire inside_board;
@@ -195,8 +195,7 @@ module game_logic_controller (
 	assign h_mod = ((screen_y - `BOARD_OFFSET_Y) % `BLOCK_SIZE);
 	
 	wire is_grid;
-	assign is_grid = inside_board &&
-						  ((w_mod < `GRID_STROKE) || (h_mod < `GRID_STROKE));
+	assign is_grid = inside_board && ((w_mod < `GRID_STROKE) || (h_mod < `GRID_STROKE));
 	
 	wire[3:0] w_div;
 	assign w_div = ((screen_x - `BOARD_OFFSET_X) / `BLOCK_SIZE);
@@ -222,6 +221,7 @@ module game_logic_controller (
 
 		curr_piece_x  <= 4'd4;
 		curr_piece_y  <= 5'd0;
+
 	end
 	endtask
 
@@ -363,7 +363,7 @@ module game_logic_controller (
 
 		while (row >= 0) begin
 			if (!is_full_line[row]) begin
-				index_map[idx] = row;
+				index_map[idx] <= row;
 				idx = idx + 1;
 			end else begin
 				full_line_count = full_line_count + 3'd1;
@@ -381,7 +381,7 @@ module game_logic_controller (
 		integer src_row_idx;
 	begin
 		for (i = 0; i < `BLOCKS_H; i = i + 1) begin
-		   	src_row_idx = index_map[`BLOCKS_H - i - 1];
+			src_row_idx = index_map[`BLOCKS_H - i - 1];
 			game_board[i] = game_board[src_row_idx];
 		end
 	end
@@ -394,6 +394,13 @@ module game_logic_controller (
 		state = `S_IDLE;
 		fall_timer = 10'd0;
 		RGB = 30'd0;
+		next_piece  	= 3'd7;
+		next_piece_rot = 2'd0;
+
+		curr_piece   	= 3'd7;
+		curr_piece_rot = 2'd0;
+		curr_piece_x   = 4'd4;
+		curr_piece_y   = 5'd0;
 		
 		for (i = 0; i < `BLOCKS_H; i = i + 1) 
 		begin
@@ -413,8 +420,8 @@ module game_logic_controller (
 		else begin
 			
 			if (state == `S_IDLE) begin
-				//if (game_start) state <= `S_PLAY;
-				state <= `S_START;
+				if (game_start) state <= `S_START;
+				// state <= `S_START;
 
 			end else if (state == `S_START) begin
 				start_game();
@@ -435,7 +442,9 @@ module game_logic_controller (
 				rebuild_board();
 				get_new_block();
 				state <= (game_over) ? `S_OVER : `S_PLAY;
-			end
+			end else if (state == `S_OVER) begin
+				# 1_000_000; // 1s
+			end else state <= `S_IDLE;
 		end
 	end
 
@@ -458,7 +467,8 @@ module game_logic_controller (
 				end
 				else if (game_board[h_div][`BLOCKS_W - w_div - 4'd1]) begin
 					RGB <= `COLOR_BLOCK_LOCK;
-				end
+				end 
+				else RGB <= `COLOR_BLOCK;
 			end else if (is_next_piece) begin
 				case (next_piece)
 					3'b000 : RGB <= `COLOR_BLOCK_I;

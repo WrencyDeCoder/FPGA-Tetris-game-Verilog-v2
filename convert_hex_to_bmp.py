@@ -34,7 +34,7 @@ import os
 
 WIDTH, HEIGHT = 640, 480
 
-for i in range(20):
+for i in range(27):
     hex_file = f"D:/HK5/testbench/frame_{i}.hex"
     bmp_file = f"tb_img/frame_{i}.bmp"
 

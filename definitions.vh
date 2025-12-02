@@ -50,6 +50,12 @@
 `define BOARD_OFFSET_X	220
 `define BOARD_OFFSET_Y	20
 `define GRID_STROKE	 	2
+`define SCORE_TEXT_X    440
+`define SCORE_TEXT_Y    380
+`define DIGIT_WIDTH     8
+`define DIGIT_HEIGHT    10 
+`define DIGIT_SPACE     1
+`define DIGIT_SCALE     3
 
 // State
 `define S_IDLE		3'd0

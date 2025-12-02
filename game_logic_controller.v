@@ -62,6 +62,7 @@ module game_logic_controller (
 
 	// FSM STATE
 	reg [2:0] state;
+	reg [2:0] prev_state;
 
 	// CURRENT & NEXT BLOCK DECODE
 	reg 	[2:0]   	curr_piece;
@@ -209,6 +210,16 @@ module game_logic_controller (
 	wire is_next_piece;
 	assign is_next_piece = (screen_x > `BOARD_OFFSET_X) && (w_div >= 4'd12) && (w_div <= 4'd15) && (h_div >= 5'd1) && (h_div <= 5'd4) &&
 								  (piece_bool[next_piece][next_piece_rot][(5'd3 - (h_div - 5'd1) << 2) + (4'd3 - (w_div - 4'd12))]) ;
+
+	wire inside_score_text_area = 
+        (screen_x >= `SCORE_TEXT_X) && 
+        (screen_x < `SCORE_TEXT_X + (3*`DIGIT_WIDTH + 2*`DIGIT_SPACE) * `DIGIT_SCALE) &&
+        (screen_y >= `SCORE_TEXT_Y) && 
+        (screen_y < `SCORE_TEXT_Y + `DIGIT_HEIGHT * `DIGIT_SCALE);
+
+	wire is_hundreds = (screen_x < `SCORE_TEXT_X + `DIGIT_WIDTH * `DIGIT_SCALE);
+	 
+	wire is_tens	= (screen_x < `SCORE_TEXT_X + (2 * `DIGIT_WIDTH + `DIGIT_SPACE) * `DIGIT_SCALE);
 
 	// TASK: get_new_block
 	// update current piece, next piece and piece position.
@@ -410,6 +421,8 @@ module game_logic_controller (
 		begin
 			game_board[i] = 10'd0;
 		end
+
+
 	end
 
 	
@@ -429,7 +442,7 @@ module game_logic_controller (
 			curr_piece_y   <= 5'd0;
 		end 
 		else begin
-			
+
 			if (state == `S_IDLE) begin
 				if (game_start) state <= `S_START;
 				// state <= `S_START;
@@ -453,14 +466,46 @@ module game_logic_controller (
 				rebuild_board();
 				get_new_block();
 				state <= (game_over) ? `S_OVER : `S_PLAY;
+
 			end else if (state == `S_OVER) begin
-				# 1_000_000; // 1s
+				//# 1_000_000; // 1s
 				state <= `S_IDLE;
+
+			end else if (state == `S_PAUSE) begin
+				if (!sw_pause) state <= prev_state;
+
 			end else state <= `S_IDLE;
+
+			if (sw_pause) 
+				state <= `S_PAUSE;
+			else
+				prev_state <= state;
+
 		end
 	end
 
 	// DRAW PIXELS
+	 // Score digits (bitmap)
+    wire  [79:0] hundreds;
+    wire  [79:0] tens;
+    wire  [79:0] ones;
+
+	score_digit_rom rom_h (
+        .number(score_3),
+        .data(hundreds)
+    	);
+
+    score_digit_rom rom_t (
+        .number(score_2),
+        .data(tens)
+    	);
+
+    score_digit_rom rom_o (
+        .number(score_1),
+        .data(ones)
+	);
+
+	integer local_x, local_y, bit_index;
 	always @(*) begin
 		if (active_area) begin
 			if (inside_board) begin
@@ -492,9 +537,34 @@ module game_logic_controller (
 					3'b110 : RGB <= `COLOR_BLOCK_L;
 					default : RGB <= `COLOR_BLOCK;					
 				endcase
-			end else begin
+			end 
+			else if (inside_score_text_area) begin
+				// Default score background
+				RGB = `COLOR_BG;
+
+				local_x = (screen_x - `SCORE_TEXT_X) / `DIGIT_SCALE;
+				local_y = (screen_y - `SCORE_TEXT_Y) / `DIGIT_SCALE;
+
+				// Hundreds
+				if (is_hundreds) begin
+					bit_index = (local_y * 8) + local_x;
+					if (hundreds[79 - bit_index])
+						RGB <= `COLOR_TEXT;
+				end
+				// Tens
+				else if (is_tens) begin
+					bit_index = (local_y * 8) + (local_x - (`DIGIT_WIDTH + `DIGIT_SPACE));
+					if (tens[79 - bit_index])
+						RGB <= `COLOR_TEXT;
+				end
+				// Ones
+				else begin
+					bit_index = (local_y * 8) + (local_x - 2 * (`DIGIT_WIDTH + `DIGIT_SPACE));
+					if (ones[79 - bit_index])
+						RGB <= `COLOR_TEXT;
+				end 
+			end else 
 				RGB <= `COLOR_BG;
-			end
 		end
 	end
 

@@ -1,24 +1,50 @@
 module input_handler (
-	input  	clk,
-	input 	raw_signal,
-	output	signal
+    input  wire clk,
+    input  wire raw_signal,       
+    output wire signal          
 );
 
-	reg snapshot = 1'b0;
-	reg snapshot_bfr = 1'b0;
-	reg [4:0] counter = 5'd0;
+    parameter INITIAL_DELAY = 20; 
+    parameter REPEAT_RATE   = 3;   
 
-	wire counter_rising;
+    reg prev = 1'd0;
+    reg [7:0] counter = 8'd0;
+    reg repeating = 1'd0;
 
-	always @(posedge clk) begin
-	  if (counter == 5'd10) begin
-		 counter <= 1'b0;
-		 snapshot <= raw_signal;
-	  end else counter <= counter + 1'b1;
-	end
+    wire rising = raw_signal & ~prev;       
 
-	always @(posedge clk) snapshot_bfr <= snapshot;
+    reg out_pulse = 1'd0;
 
-	assign signal = snapshot & (~snapshot_bfr);
+    assign signal = out_pulse;
 
-endmodule 
+    always @(posedge clk) begin
+        prev <= raw_signal;
+        out_pulse <= 1'd0;
+
+        if (rising) begin
+            out_pulse <= 1'd1;
+            counter <= 8'd0;
+            repeating <= 1'd0;
+
+        end else if (raw_signal) begin
+            counter <= counter + 8'd1;
+
+            if (!repeating) begin
+                if (counter >= INITIAL_DELAY) begin
+                    repeating <= 1'd1;
+                    counter <= 8'd0;
+                    out_pulse <= 1'd1;    
+                end
+            end else begin
+                if (counter >= REPEAT_RATE) begin
+                    counter <= 0;
+                    out_pulse <= 1;    
+                end
+            end
+
+        end else begin
+            counter <= 8'd0;
+            repeating <= 1'd0;
+        end
+    end
+endmodule

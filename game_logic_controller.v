@@ -13,12 +13,13 @@ module game_logic_controller (
 	//from VGA
 	input   wire			active_area,
 	input   wire 	[9:0] 	screen_x,
-   	input   wire 	[9:0] 	screen_y,
+   input   wire 	[9:0] 	screen_y,
 	
 	output  reg 	[29:0]   	RGB
 );
 	//	GAME BOARD 
 	reg [`BLOCKS_W-4'd1 : 0] game_board [`BLOCKS_H-5'd1 : 0]; 
+	reg [3*`BLOCKS_W-4'd1 : 0] game_board_color [`BLOCKS_H-5'd1 : 0]; 
 
 	//	INPUT HANDLE
 	wire down_signal;
@@ -61,8 +62,8 @@ module game_logic_controller (
 	);
 
 	// FSM STATE
-	reg [2:0] state;
-	reg [2:0] prev_state;
+	reg [3:0] state;
+	reg [3:0] prev_state;
 
 	// CURRENT & NEXT BLOCK DECODE
 	reg 	[2:0]   	curr_piece;
@@ -72,8 +73,8 @@ module game_logic_controller (
 	reg 	[2:0]   	next_piece;
 	reg 	[1:0] 	next_piece_rot;
 
-	wire [15:0] 	piece_bool 	[7:0][4:0];
-	wire [3:0] 	piece_height	[7:0][4:0];
+	wire [15:0] 	piece_bool 	[7:0][3:0];
+	wire [3:0] 	piece_height	[7:0][3:0];
 	
 	// I piece
 	assign piece_bool[0][0] = 16'b1000100010001000; assign piece_height[0][0] = 4'd4;
@@ -118,10 +119,10 @@ module game_logic_controller (
 	
 	// CHECK PIECE COLLISION
 	wire is_curr_piece_w_ok;
-	assign is_curr_piece_w_ok = curr_piece_x + curr_piece_w < `BLOCKS_W;
+	assign is_curr_piece_w_ok = (curr_piece_x + curr_piece_w < `BLOCKS_W);
 	
 	wire is_curr_piece_h_ok;
-	assign is_curr_piece_h_ok = curr_piece_y + curr_piece_h < `BLOCKS_H;
+	assign is_curr_piece_h_ok = (curr_piece_y + curr_piece_h < `BLOCKS_H);
 	
 	wire [3:0] curr_piece_x_shift;
 	assign curr_piece_x_shift = (`BLOCKS_W - 4'd1) - curr_piece_x;
@@ -152,7 +153,7 @@ module game_logic_controller (
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[curr_piece_y + 4], 3'b0} >> curr_piece_x_shift))) ;
 
 	wire can_move_left;
-	assign can_move_left = (curr_piece_x > 0) && is_curr_piece_w_ok &&
+	assign can_move_left = (curr_piece_x > 0) &&
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> left_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> left_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> left_piece_x_shift))) &&
@@ -171,7 +172,7 @@ module game_logic_controller (
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> curr_piece_x_shift))) ;
-
+	
 	// SCORE
 	reg [3:0] score_1, score_2, score_3; // ones, tens, hundred 
 
@@ -181,9 +182,8 @@ module game_logic_controller (
 	localparam FALL_TIMER_MAX = 40;
 
 	// BOOLEAN FLAGS
-	wire is_full_line[`BLOCKS_H-5'd1:0] ;
-	wire game_start = down_signal | left_signal | right_signal | rotate_signal;
-	wire game_over =  (|game_board[0]);  
+	wire press_any_key = down_signal | left_signal | right_signal | rotate_signal;
+	wire game_over =  |game_board[0];  
 
 	// SCREEN CHECK
 	wire inside_board;
@@ -220,6 +220,26 @@ module game_logic_controller (
 	wire is_hundreds = (screen_x < `SCORE_TEXT_X + `DIGIT_WIDTH * `DIGIT_SCALE);
 	 
 	wire is_tens	= (screen_x < `SCORE_TEXT_X + (2 * `DIGIT_WIDTH + `DIGIT_SPACE) * `DIGIT_SCALE);
+
+	// Score digits (bitmap)
+	wire  [79:0] hundreds;
+	wire  [79:0] tens;
+	wire  [79:0] ones;
+
+	score_digit_rom rom_h (
+        .number(score_3),
+        .data(hundreds)
+    	);
+
+    	score_digit_rom rom_t (
+        .number(score_2),
+        .data(tens)
+    	);
+
+    	score_digit_rom rom_o (
+        .number(score_1),
+        .data(ones)
+	);
 
 	// TASK: get_new_block
 	// update current piece, next piece and piece position.
@@ -318,6 +338,7 @@ module game_logic_controller (
 	// TASK: add_to_game_board
 	task add_to_game_board;
 		integer dy, dx;
+		integer board_color_idx;
 	begin
 		for (dy = 0; dy < 4; dy = dy + 1)
 			for (dx = 0; dx < 4; dx = dx + 1)
@@ -326,7 +347,21 @@ module game_logic_controller (
 				end
 	end
 	endtask
-
+	
+	// TASK: add_to_game_board_color
+	task add_to_game_board_color;
+		integer dy, dx;
+		integer board_color_idx;
+	begin
+		for (dy = 0; dy < 4; dy = dy + 1)
+			for (dx = 0; dx < 4; dx = dx + 1)
+				if (piece_bool[curr_piece][curr_piece_rot][(3-dy)*4 + dx]) begin
+					board_color_idx = 3*((`BLOCKS_W - curr_piece_x - 4'd1) - (3'd3 - dx));
+					game_board_color[curr_piece_y + dy][board_color_idx +: 3] <= curr_piece;
+				end
+	end
+	endtask
+	
 	// TASK: increase_score
 	// note: update difference score with difference line full
 	task increase_score;
@@ -359,20 +394,13 @@ module game_logic_controller (
 
 	// TASK: check_full_line 
 	reg [4:0] index_map[`BLOCKS_H-1:0];
-	
-	genvar r;
-	generate 
-		for (r = 0; r < `BLOCKS_H; r = r + 1) begin : CHECK_LINE
-			assign is_full_line[r] = &game_board[r];
-		end
-	endgenerate
+	reg [2:0] full_line_count;
 	
 	task check_full_line;
 		integer row, idx, j;
-		reg [2:0] full_line_count;
 	begin
 		idx = 0;
-		full_line_count = 0;
+		full_line_count = 3'd0;
 
 		for (j = 0; j < `BLOCKS_H; j = j + 1)
 			index_map[j] = 0;
@@ -385,8 +413,6 @@ module game_logic_controller (
 				full_line_count = full_line_count + 3'd1;
 			end
 		end
-
-		increase_score(full_line_count);
 	end
 	endtask
 
@@ -402,10 +428,21 @@ module game_logic_controller (
 	end
 	endtask
 
+	task rebuild_board_color;
+		integer i;
+		integer src_row_idx;
+	begin
+		for (i = `BLOCKS_H - 1; i >= 0; i = i - 1) begin
+			src_row_idx = index_map[`BLOCKS_H - i - 1];
+			game_board_color[i] = game_board_color[src_row_idx];
+		end
+	end
+	endtask
 	// INITIAL RESET LOGIC
-	integer i;
 
 	initial begin
+		integer i;
+		
 		state = `S_IDLE;
 		fall_timer = 10'd0;
 		RGB = 30'd0;
@@ -433,6 +470,7 @@ module game_logic_controller (
 	always @(posedge clk or negedge reset_n) begin
 		if (!reset_n) begin
 			state <= `S_IDLE;
+
 			next_piece  	<= 3'd7;
 			next_piece_rot <= 2'd0;
 
@@ -443,128 +481,155 @@ module game_logic_controller (
 		end 
 		else begin
 
-			if (state == `S_IDLE) begin
-				if (game_start) state <= `S_START;
-				// state <= `S_START;
+		case (state)
+			`S_IDLE: begin
+				if (press_any_key)
+					state <= `S_START;
+			end
 
-			end else if (state == `S_START) begin
+			`S_START: begin
 				start_game();
 				state <= `S_PLAY;
+			end
 
-			end else if (state == `S_PLAY) begin
-				move_piece();
-				// if colision state = S_ADD
-			end else if (state == `S_ADD) begin
+			`S_PLAY: begin
+				if (sw_pause) begin
+					prev_state <= `S_PLAY;
+					state <= `S_PAUSE;
+				end else begin
+					move_piece();
+				end
+			end
+
+			`S_ADD: begin
 				add_to_game_board();
-				state <= `S_CHECK;
+				if (game_over)
+					state <= `S_OVER;
+				else
+					state <= `S_ADD_COLOR;
+			end
 
-			end else if (state == `S_CHECK) begin
+			`S_ADD_COLOR: begin
+				add_to_game_board_color();
+				state <= `S_CHECK;
+			end
+
+			`S_CHECK: begin
 				check_full_line();
 				state <= `S_REMOVE;
+			end
 
-			end else if (state == `S_REMOVE) begin
+			`S_REMOVE: begin
 				rebuild_board();
+				state <= `S_RM_COLOR;
+			end
+			
+			`S_RM_COLOR: begin
+				rebuild_board_color();
+				state <= `S_INC_SCR;
+			end
+
+			`S_INC_SCR: begin
+				increase_score(full_line_count);
 				get_new_block();
-				state <= (game_over) ? `S_OVER : `S_PLAY;
+				state <= `S_PLAY;
+			end
 
-			end else if (state == `S_OVER) begin
-				//# 1_000_000; // 1s
-				state <= `S_IDLE;
+			`S_OVER: begin
+				if (press_any_key)
+					state <= `S_IDLE;
+			end
 
-			end else if (state == `S_PAUSE) begin
-				if (!sw_pause) state <= prev_state;
+			`S_PAUSE: begin
+				if (!sw_pause)
+					state <= prev_state;
+			end
 
-			end else state <= `S_IDLE;
-
-			if (sw_pause) 
-				state <= `S_PAUSE;
-			else
-				prev_state <= state;
+			default: state <= `S_IDLE;
+		endcase
 
 		end
 	end
 
 	// DRAW PIXELS
-	 // Score digits (bitmap)
-    wire  [79:0] hundreds;
-    wire  [79:0] tens;
-    wire  [79:0] ones;
+	function [29:0] get_color;
+		input [2:0] block_id;
+	begin
+		case (block_id)
+			3'b000 : get_color = `COLOR_BLOCK_I;
+			3'b001 : get_color = `COLOR_BLOCK_O;
+			3'b010 : get_color = `COLOR_BLOCK_T;
+			3'b011 : get_color = `COLOR_BLOCK_S;
+			3'b100 : get_color = `COLOR_BLOCK_Z;
+			3'b101 : get_color = `COLOR_BLOCK_J;
+			3'b110 : get_color = `COLOR_BLOCK_L;
+			default: get_color = `COLOR_BLOCK;
+		endcase
+	end
+	endfunction
 
-	score_digit_rom rom_h (
-        .number(score_3),
-        .data(hundreds)
-    	);
-
-    score_digit_rom rom_t (
-        .number(score_2),
-        .data(tens)
-    	);
-
-    score_digit_rom rom_o (
-        .number(score_1),
-        .data(ones)
+	wire inside_game_over_text;
+	wire is_game_over_text;
+	game_over_text_rom gover_rom (
+		.X(screen_x),
+		.Y(screen_y),
+		.inside_area(inside_game_over_text),
+		.is_pixel(is_game_over_text)
 	);
 
-	integer local_x, local_y, bit_index;
+	reg draw_pixel;
+	reg [9:0] local_x, local_y;
+	integer  bit_index, board_idx;
 	always @(*) begin
 		if (active_area) begin
-			if (inside_board) begin
-				if (is_grid) RGB <= `COLOR_GRID;
+			if (state == `S_OVER) begin
+				if (inside_game_over_text) 
+					RGB = (is_game_over_text) ? `COLOR_TEXT : `COLOR_BLOCK_LOCK;			
+				else 
+					RGB = `COLOR_BG;
+			end
+			else if (inside_board) begin
+
+				board_idx = `BLOCKS_W - w_div - 4'd1;
+
+				if (is_grid) RGB = `COLOR_GRID;
 				else if (is_curr_piece) begin 
-					case (curr_piece)
-						3'b000 : RGB <= `COLOR_BLOCK_I;
-						3'b001 : RGB <= `COLOR_BLOCK_O;
-						3'b010 : RGB <= `COLOR_BLOCK_T;
-						3'b011 : RGB <= `COLOR_BLOCK_S;
-						3'b100 : RGB <= `COLOR_BLOCK_Z;
-						3'b101 : RGB <= `COLOR_BLOCK_J;
-						3'b110 : RGB <= `COLOR_BLOCK_L;
-						default : RGB <= `COLOR_BLOCK;					
-					endcase
+					RGB = get_color(curr_piece);
 				end
-				else if (game_board[h_div][`BLOCKS_W - w_div - 4'd1]) begin
-					RGB <= `COLOR_BLOCK_LOCK;
+				else if (game_board[h_div][board_idx]) begin
+					RGB = get_color(game_board_color[h_div][3*board_idx +: 3]);
 				end 
-				else RGB <= `COLOR_BLOCK;
+				else RGB = `COLOR_BLOCK;
+
 			end else if (is_next_piece) begin
-				case (next_piece)
-					3'b000 : RGB <= `COLOR_BLOCK_I;
-					3'b001 : RGB <= `COLOR_BLOCK_O;
-					3'b010 : RGB <= `COLOR_BLOCK_T;
-					3'b011 : RGB <= `COLOR_BLOCK_S;
-					3'b100 : RGB <= `COLOR_BLOCK_Z;
-					3'b101 : RGB <= `COLOR_BLOCK_J;
-					3'b110 : RGB <= `COLOR_BLOCK_L;
-					default : RGB <= `COLOR_BLOCK;					
-				endcase
+
+				RGB = get_color(next_piece);
+
 			end 
 			else if (inside_score_text_area) begin
-				// Default score background
-				RGB = `COLOR_BG;
 
-				local_x = (screen_x - `SCORE_TEXT_X) / `DIGIT_SCALE;
-				local_y = (screen_y - `SCORE_TEXT_Y) / `DIGIT_SCALE;
+				RGB = `COLOR_BG; 
 
-				// Hundreds
-				if (is_hundreds) begin
-					bit_index = (local_y * 8) + local_x;
-					if (hundreds[79 - bit_index])
-						RGB <= `COLOR_TEXT;
-				end
-				// Tens
-				else if (is_tens) begin
-					bit_index = (local_y * 8) + (local_x - (`DIGIT_WIDTH + `DIGIT_SPACE));
-					if (tens[79 - bit_index])
-						RGB <= `COLOR_TEXT;
-				end
-				// Ones
-				else begin
-					bit_index = (local_y * 8) + (local_x - 2 * (`DIGIT_WIDTH + `DIGIT_SPACE));
-					if (ones[79 - bit_index])
-						RGB <= `COLOR_TEXT;
+				local_x = (screen_x - `SCORE_TEXT_X) / `DIGIT_SCALE; 
+				local_y = (screen_y - `SCORE_TEXT_Y) / `DIGIT_SCALE; 
+				// Hundreds 
+				if (is_hundreds) begin 
+					bit_index = (local_y * 8) + local_x; 
+					if (hundreds[79 - bit_index]) RGB = `COLOR_TEXT; 
 				end 
-			end else 
-				RGB <= `COLOR_BG;
+				// Tens 
+				else if (is_tens) begin 
+					bit_index = (local_y * 8) + (local_x - (`DIGIT_WIDTH + `DIGIT_SPACE)); 
+					if (tens[79 - bit_index]) RGB = `COLOR_TEXT; 
+				end 
+				// Ones 
+				else begin 
+					bit_index = (local_y * 8) + (local_x - 2 * (`DIGIT_WIDTH + `DIGIT_SPACE)); 
+					if (ones[79 - bit_index]) RGB = `COLOR_TEXT;
+				end
+			end else begin
+				RGB = `COLOR_BG;
+			end
 		end
 	end
 

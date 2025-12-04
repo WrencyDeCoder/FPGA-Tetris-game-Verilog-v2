@@ -58,19 +58,22 @@
 `define DIGIT_SCALE     3
 
 // State
-`define S_IDLE		3'd0
-`define S_START		3'd1
-`define S_PLAY		3'd2
-`define S_ADD		3'd3
-`define S_CHECK	    3'd4
-`define S_REMOVE	3'd5
-`define S_OVER	    3'd6
-`define S_PAUSE	    3'd7
+`define S_IDLE		4'd0
+`define S_START		4'd1
+`define S_PLAY		4'd2
+`define S_ADD		4'd3
+`define S_ADD_COLOR	4'd4
+`define S_CHECK	    4'd5
+`define S_REMOVE	4'd6
+`define S_RM_COLOR	4'd7
+`define S_OVER	    4'd8
+`define S_INC_SCR   4'd9
+`define S_PAUSE	    4'd10
 
 // LFSR seed
 `define LFSR_SEED		8'b10101010
 
 // clock
-`define GAME_CLOCK_Hz 120
+`define GAME_CLOCK_Hz 60
 `define GAME_CLOCK_COUNTER_MAX (50_000_000 / `GAME_CLOCK_Hz)
 

@@ -123,6 +123,12 @@ module game_logic_controller (
 	
 	wire is_curr_piece_h_ok;
 	assign is_curr_piece_h_ok = (curr_piece_y + curr_piece_h < `BLOCKS_H);
+
+	wire is_rot_piece_w_ok;
+	assign is_rot_piece_w_ok = (curr_piece_x + curr_piece_h <= `BLOCKS_W);
+	
+	wire is_rot_piece_h_ok;
+	assign is_rot_piece_h_ok = (curr_piece_y + curr_piece_w <= `BLOCKS_H);
 	
 	wire [3:0] curr_piece_x_shift;
 	assign curr_piece_x_shift = (`BLOCKS_W - 4'd1) - curr_piece_x;
@@ -167,7 +173,7 @@ module game_logic_controller (
 							(~|({9'b0, piece_bool[curr_piece][curr_piece_rot][ 3: 0]} & ({game_board[test_piece_y3], 3'b000} >> right_piece_x_shift))) ;
 
 	wire can_rotate;
-	assign can_rotate = is_curr_piece_h_ok && is_curr_piece_w_ok &&
+	assign can_rotate = is_rot_piece_h_ok && is_rot_piece_w_ok &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][15:12]} & ({game_board[test_piece_y0], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][11: 8]} & ({game_board[test_piece_y1], 3'b000} >> curr_piece_x_shift))) &&
 							(~|({9'b0, piece_bool[curr_piece][test_piece_rot][ 7: 4]} & ({game_board[test_piece_y2], 3'b000} >> curr_piece_x_shift))) &&
@@ -368,25 +374,25 @@ module game_logic_controller (
 		input [2:0] num_lines;    
 	begin
 		case (num_lines)
-			3'd1: score_1 <= score_1 + 4'd1;  // single
-			3'd2: score_1 <= score_1 + 4'd3;  // double
-			3'd3: score_1 <= score_1 + 4'd5;  // triple
-			3'd4: score_1 <= score_1 + 4'd8;  // Tetris
-			default: score_1 <= score_1 + 4'd0;
+			3'd1: score_1 = score_1 + 4'd1;  // single
+			3'd2: score_1 = score_1 + 4'd3;  // double
+			3'd3: score_1 = score_1 + 4'd5;  // triple
+			3'd4: score_1 = score_1 + 4'd8;  // Tetris
+			default: score_1 = score_1 + 4'd0;
 		endcase
 
 		if (score_1 > 4'd9) begin
-			score_1 <= score_1 - 4'd10;
-			score_2 <= score_2 + 4'd1;
+			score_1 = score_1 - 4'd10;
+			score_2 = score_2 + 4'd1;
 		end
 		
 		if (score_2 > 4'd9) begin
-			score_2 <= 4'd0;
-			score_3 <= score_3 + 4'd1;
+			score_2 = 4'd0;
+			score_3 = score_3 + 4'd1;
 		end
 		
 		if (score_3 > 4'd9) begin
-			score_3 <= 4'd0;
+			score_3 = 4'd0;
 		end
 	end
 	endtask
@@ -438,10 +444,33 @@ module game_logic_controller (
 		end
 	end
 	endtask
-	// INITIAL RESET LOGIC
 
-	initial begin
+	
+	task clear_board;
 		integer i;
+	begin
+		score_1 			= 3'd0;
+		score_2 			= 3'd0;
+		score_3 			= 3'd0;
+		
+		next_piece  	= 3'd7;
+		next_piece_rot = 2'd0;
+
+		curr_piece   	= 3'd7;
+		curr_piece_rot = 2'd0;
+
+		for (i = 0; i < `BLOCKS_H; i = i + 1) 
+		begin
+			game_board[i] = 10'd0;
+			game_board_color[i] = 30'd0;
+		end
+	end
+	endtask
+
+	// INITIAL RESET LOGIC
+	integer init_i;
+	initial begin
+		
 		
 		state = `S_IDLE;
 		fall_timer = 10'd0;
@@ -454,11 +483,10 @@ module game_logic_controller (
 		curr_piece_x   = 4'd4;
 		curr_piece_y   = 5'd0;
 		
-		for (i = 0; i < `BLOCKS_H; i = i + 1) 
+		for (init_i = 0; init_i < `BLOCKS_H; init_i = init_i + 1) 
 		begin
-			game_board[i] = 10'd0;
+			game_board[init_i] = 10'd0;
 		end
-
 
 	end
 
@@ -536,6 +564,8 @@ module game_logic_controller (
 			end
 
 			`S_OVER: begin
+				clear_board();
+				
 				if (press_any_key)
 					state <= `S_IDLE;
 			end
@@ -583,17 +613,14 @@ module game_logic_controller (
 	always @(*) begin
 		if (active_area) begin
 			if (state == `S_OVER) begin
-				if (inside_game_over_text) 
-					RGB = (is_game_over_text) ? `COLOR_TEXT : `COLOR_BLOCK_LOCK;			
-				else 
-					RGB = `COLOR_BG;
+				RGB = (is_game_over_text) ? `COLOR_TEXT : `COLOR_BG;			
 			end
 			else if (inside_board) begin
 
 				board_idx = `BLOCKS_W - w_div - 4'd1;
 
 				if (is_grid) RGB = `COLOR_GRID;
-				else if (is_curr_piece) begin 
+				else if (is_curr_piece & !game_over) begin 
 					RGB = get_color(curr_piece);
 				end
 				else if (game_board[h_div][board_idx]) begin

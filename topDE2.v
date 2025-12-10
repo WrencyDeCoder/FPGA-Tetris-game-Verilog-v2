@@ -34,7 +34,7 @@ module topDE2 (
           .button_rotate(key_rotate),
           .button_left(key_left),
           .button_right(key_right),
-          .sw_pause(),
+          .sw_pause(sw_pause),
           // vga out
           .vga_hsync(VGA_HS),
           .vga_vsync(VGA_VS),

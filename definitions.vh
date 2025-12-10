@@ -71,7 +71,7 @@
 `define S_PAUSE	    4'd10
 
 // LFSR seed
-`define LFSR_SEED		8'b10101010
+`define LFSR_SEED		8'b10111010
 
 // clock
 `define GAME_CLOCK_Hz 60

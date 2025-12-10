@@ -67,25 +67,25 @@ Mục tiêu của project là xây dựng một game Tetris hoạt động trên
 
 ### 🧑‍💻 Cấu trúc & Kiến trúc thiết kế
 
-Thiết kế tuân theo mô hình phân tách display logic (VGA) — game logic. Cụ thể:
+- Thiết kế tuân theo mô hình phân tách display logic (VGA) — game logic. Cụ thể:
 
-vga_controller.v chỉ đảm nhận phần timing VGA, sinh xung HSync/VSync/blank, sinh tọa độ pixel, xác định vùng hiển thị (active_area).
+- vga_controller.v chỉ đảm nhận phần timing VGA, sinh xung HSync/VSync/blank, sinh tọa độ pixel, xác định vùng hiển thị (active_area).
 
-game_logic_controller.v + các module phụ chịu trách nhiệm logic trò chơi: quản lý lưới, khối, điểm số, input, collision, v.v.
+- game_logic_controller.v + các module phụ chịu trách nhiệm logic trò chơi: quản lý lưới, khối, điểm số, input, collision, v.v.
 
-Hai phần được kết nối thông qua bus đơn giản: tại mỗi pixel (x, y), nếu active_area = 1 thì game logic quyết định màu RGB sẽ xuất ra; còn nếu active_area = 0 → xuất màu nền / blanking.
+- Hai phần được kết nối thông qua bus đơn giản: tại mỗi pixel (x, y), nếu active_area = 1 thì game logic quyết định màu RGB sẽ xuất ra; còn nếu active_area = 0 → xuất màu nền / blanking.
 
 Cách phân tách này giúp:
 
-Logic hiển thị & timing VGA đồng bộ, ổn định, không phụ thuộc vào tốc độ game.
+- Logic hiển thị & timing VGA đồng bộ, ổn định, không phụ thuộc vào tốc độ game.
 
-Logic game chạy độc lập theo “frame logic” (tốc độ chậm hơn), dễ điều chỉnh tốc độ rơi, phản hồi input, v.v.
+- Logic game chạy độc lập theo “frame logic” (tốc độ chậm hơn), dễ điều chỉnh tốc độ rơi, phản hồi input, v.v.
 
-Dễ bảo trì, mở rộng — ví dụ thêm tính năng mới mà không ảnh hưởng VGA timing.
+- Dễ bảo trì, mở rộng — ví dụ thêm tính năng mới mà không ảnh hưởng VGA timing.
 
-📁 Cấu trúc thư mục (gốc repo)
+📁 Cấu trúc thư mục
 /                  # root  
-  ├─ topDE2.v  
+  ├─ HDL_FPGA_Tetris.v  
   ├─ vga_controller.v  
   ├─ game_logic_controller.v  
   ├─ collision.v  
@@ -93,8 +93,8 @@ Dễ bảo trì, mở rộng — ví dụ thêm tính năng mới mà không ả
   ├─ randomizer.v  
   ├─ score_digit_rom.v  
   ├─ game_over_text_rom.v  
-  ├─ definitions.vh  
-  └─ (nếu có) file constraints / pin assignment  
+  └─ definitions.vh  
+   
 
 📝 Ghi chú / Hạn chế & Hướng phát triển
 

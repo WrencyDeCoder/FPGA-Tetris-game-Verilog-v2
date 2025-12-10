@@ -10,7 +10,7 @@ Mục tiêu của project là xây dựng một game Tetris hoạt động trên
 
 | File / Module | Chức năng |
 |---------------|-----------|
-| `topDE2.v` | Module top — kết nối toàn bộ khối con, ánh xạ chân FPGA, phát lock-up file cấu hình |
+| `HDL_FPGA_Tetris.v` | Module top — kết nối toàn bộ khối con, ánh xạ chân FPGA, phát lock-up file cấu hình |
 | `vga_controller.v` | Bộ điều khiển VGA: sinh hsync/vsync, blanking, tính tọa độ pixel (x, y), phân biệt vùng hiển thị (active area) theo chuẩn VGA 640×480 @ 60 Hz |
 | `game_logic_controller.v` | Logic chính của trò chơi: quản lý lưới, khối hiện tại, khối kế tiếp, xử lý input, kiểm tra va chạm, xóa hàng, tính điểm, game over, FSM game |
 | `collision.v` | Module kiểm tra va chạm khối — đảm bảo khối không vượt biên, không chồng lên khối đã cố định |
@@ -50,24 +50,22 @@ Mục tiêu của project là xây dựng một game Tetris hoạt động trên
 1. Clone repo:  
    ```bash
    git clone https://github.com/WrencyDeCoder/FPGA-Tetris-game-Verilog-v2.git
-Mở Quartus II, tạo project mới hoặc dùng file project có sẵn.
+2. Mở Quartus II, tạo project mới hoặc dùng file project có sẵn.
 
-Thêm toàn bộ file Verilog / definitions / constraints pin-assignment tương ứng với kit DE2.
+3. Thêm toàn bộ file Verilog / definitions / constraints pin-assignment tương ứng với kit DE2.
 
-Gán chân (Pin Assignment): CLOCK_50, KEY[3:0], SW[9:0], VGA_R/G/B, VGA_HS, VGA_VS, VGA_BLANK, VGA_CLK,... phù hợp với sơ đồ pinout của DE2.
+4. Gán chân (Pin Assignment): CLOCK_50, KEY[3:0], SW[9:0], VGA_R/G/B, VGA_HS, VGA_VS, VGA_BLANK, VGA_CLK,... phù hợp với sơ đồ pinout của DE2.
 
-Biên dịch (Analysis & Synthesis → Fitter). Nếu không có lỗi, tiến hành generate file configuration (.sof).
+5. Biên dịch (Analysis & Synthesis → Fitter). Nếu không có lỗi, tiến hành generate file configuration (.sof).
 
-Nạp file .sof vào FPGA Cyclone II (qua JTAG / USB-Blaster).
+6. Nạp file .sof vào FPGA Cyclone II (qua JTAG / USB-Blaster).
 
-Kết nối VGA → màn hình, bật nguồn. Giao diện ban đầu của game Tetris sẽ hiện lên. Bạn có thể dùng phím/switch để chơi.
+7. Kết nối VGA → màn hình, bật nguồn. Giao diện ban đầu của game Tetris sẽ hiện lên. Bạn có thể dùng phím/switch để chơi.
 
-🎥 Demo & Video thử nghiệm
+### 🎥 Demo & Video thử nghiệm
 
-Bạn có thể xem video demo quá trình chơi thử nghiệm trên kit DE2 + màn hình ngoài tại:
-[YouTube link của bạn] (thêm link ở đây)
 
-🧑‍💻 Cấu trúc & Kiến trúc thiết kế
+### 🧑‍💻 Cấu trúc & Kiến trúc thiết kế
 
 Thiết kế tuân theo mô hình phân tách display logic (VGA) — game logic. Cụ thể:
 
@@ -108,25 +106,3 @@ Giao diện đồ họa cơ bản — không có âm thanh, không có hiệu �
 
 Có thể mở rộng: thêm menu, lưu cao điểm, nhiều level, tăng tốc độ theo thời gian, hỗ trợ joystick/Gamepad, v.v.
 
-👥 Tác giả & Liên hệ
-
-Kinn (Khoi) — học viên ngành Kỹ thuật Máy tính, ĐH CNTT.
-
-Nếu có vấn đề, lỗi, hoặc góp ý — bạn có thể mở issue trên GitHub hoặc liên hệ qua email / nền tảng bạn thích.
-
-📜 License
-
-Bạn có thể thêm license nếu muốn — ví dụ MIT, BSD hoặc license phù hợp. Nếu chưa chọn, mặc định là All rights reserved.
-
-
----
-
-### ✨ Vì sao README như thế này là hợp lý?
-
-- README giúp người xem hiểu nhanh **mục tiêu**, **tính năng**, **cách chạy** và **cấu trúc** của project — đúng như các khuyến nghị phổ biến về README “tốt” trên GitHub: dễ hiểu, rõ ràng, đầy đủ thông tin hướng dẫn. :contentReference[oaicite:3]{index=3}  
-- Việc chia rõ các phần: “Giới thiệu”, “Cách chạy”, “Cấu trúc/Kiến trúc”, “Tác giả”, “License” giúp người mới vào repo dễ nắm thông tin và có thể chạy / tái sử dụng code mà không phải mò mẫm.
-
----
-
-Nếu muốn — mình có thể **viết luôn README tiếng Việt + tiếng Anh song song** cho repo này (bilingual), để phù hợp với cả giảng viên & cộng đồng quốc tế — bạn muốn mình làm luôn?
-::contentReference[oaicite:4]{index=4}
